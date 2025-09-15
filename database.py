@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, create_engine, Session
 from typing import Generator
 import os
 
-# URL do banco de dados (SQLite por padrão para desenvolvimento)
+# URL do banco de dados
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./controle_gastos.db")
 
 # Criar engine
