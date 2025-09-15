@@ -17,14 +17,12 @@ from auth import (
     get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
-# Criar instância do FastAPI
 app = FastAPI(
     title="Controle de Gastos API",
     description="API para controle de gastos pessoais",
     version="1.0.0"
 )
 
-# Configurar CORS para permitir requests de qualquer origem
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Permite requests de qualquer origem
@@ -32,8 +30,6 @@ app.add_middleware(
     allow_methods=["*"],  # Permite todos os métodos HTTP
     allow_headers=["*"],  # Permite todos os headers
 )
-
-# ==================== FUNÇÕES AUXILIARES ====================
 
 def calculate_balance_after_transaction(
     session: Session, 
@@ -55,14 +51,12 @@ def calculate_balance_after_transaction(
     Returns:
         Decimal: Saldo resultante após a transação
     """
-    # Buscar todas as transações do usuário com seus tipos
     query = (
         select(Transaction, TransactionType)
         .join(TransactionType)
         .where(Transaction.user_id == user_id)
     )
     
-    # Se estamos atualizando uma transação, excluí-la do cálculo
     if exclude_transaction_id:
         query = query.where(Transaction.id != exclude_transaction_id)
     
@@ -71,7 +65,6 @@ def calculate_balance_after_transaction(
     total_income = Decimal('0.00')
     total_expense = Decimal('0.00')
     
-    # Calcular totais das transações existentes
     for transaction, transaction_type in transactions:
         if transaction_type.type == TransactionTypeEnum.INCOME:
             total_income += transaction.value
@@ -86,12 +79,10 @@ def calculate_balance_after_transaction(
     
     return total_income - total_expense
 
-# Criar tabelas no startup (apenas para desenvolvimento)
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
 
-# ==================== ENDPOINTS DE AUTENTICAÇÃO ====================
 
 @app.post("/auth/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["Autenticação"])
 def register(user: UserCreate, session: Session = Depends(get_session)):
@@ -135,8 +126,6 @@ def login(user_credentials: UserLogin, session: Session = Depends(get_session)):
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Obter informações do usuário logado"""
     return current_user
-
-# ==================== ENDPOINTS DE USUÁRIOS ====================
 
 @app.post("/users/", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["Usuários"])
 def create_user(user: UserCreate, session: Session = Depends(get_session)):
@@ -193,7 +182,7 @@ def update_user(user_id: int, user_update: UserUpdate, current_user: User = Depe
             detail="Usuário não encontrado"
         )
     
-    # Verificar se novo email já existe (se fornecido)
+    # Verificar se novo email já existe
     if user_update.email and user_update.email != db_user.email:
         existing_user = session.exec(select(User).where(User.email == user_update.email)).first()
         if existing_user:
@@ -260,7 +249,6 @@ def get_user_transactions(
             detail="Usuário não encontrado"
         )
     
-    # Query com join para obter dados do tipo de transação
     results = session.exec(
         select(Transaction, TransactionType)
         .join(TransactionType)
@@ -270,7 +258,6 @@ def get_user_transactions(
         .limit(limit)
     ).all()
     
-    # Converter para TransactionRead com dados do tipo de transação
     transactions_read = []
     for transaction, transaction_type in results:
         transaction_read = TransactionRead(
@@ -329,8 +316,6 @@ def get_user_balance(user_id: int, current_user: User = Depends(get_current_user
         "total_expense": total_expense,
         "balance": balance
     }
-
-# ==================== ENDPOINTS DE TIPOS DE TRANSAÇÃO ====================
 
 @app.post("/transaction-types/", response_model=TransactionTypeRead, status_code=status.HTTP_201_CREATED, tags=["Tipos de Transação"])
 def create_transaction_type(transaction_type: TransactionTypeCreate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
@@ -413,8 +398,6 @@ def delete_transaction_type(transaction_type_id: int, current_user: User = Depen
             detail="Erro interno do servidor ao excluir tipo de transação"
         )
 
-# ==================== ENDPOINTS DE TRANSAÇÕES ====================
-
 @app.post("/transactions/", response_model=TransactionRead, status_code=status.HTTP_201_CREATED, tags=["Transações"])
 def create_transaction(transaction: TransactionCreate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     """Criar uma nova transação (apenas para o usuário logado)"""
@@ -475,18 +458,15 @@ def get_transactions(
     session: Session = Depends(get_session)
 ):
     """Listar transações do usuário logado com filtros opcionais"""
-    # Query com join para obter dados do tipo de transação
     query = select(Transaction, TransactionType).join(TransactionType).where(Transaction.user_id == current_user.id)
     
     if transaction_type_id:
         query = query.where(Transaction.transaction_type_id == transaction_type_id)
     
-    # Ordenar por created_at de forma decrescente (mais recentes primeiro)
     query = query.order_by(Transaction.created_at.desc())
     
     results = session.exec(query.offset(skip).limit(limit)).all()
     
-    # Converter para TransactionRead com dados do tipo de transação
     transactions_read = []
     for transaction, transaction_type in results:
         transaction_read = TransactionRead(
@@ -571,7 +551,7 @@ def update_transaction(
             detail="Você não pode alterar o proprietário da transação"
         )
     
-    # Verificar se novo tipo de transação existe (se fornecido)
+    # Verificar se novo tipo de transação existe
     transaction_type = None
     if transaction_update.transaction_type_id:
         transaction_type = session.get(TransactionType, transaction_update.transaction_type_id)
@@ -652,8 +632,6 @@ def delete_transaction(transaction_id: int, current_user: User = Depends(get_cur
     
     session.delete(transaction)
     session.commit()
-
-# ==================== ENDPOINT RAIZ ====================
 
 @app.get("/", tags=["Sistema"])
 def read_root():
