@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-Script para facilitar operações de migration com Alembic
-Uso: python migrations.py <comando> [argumentos]
-"""
 import subprocess
 import sys
 import os
@@ -16,7 +11,6 @@ def run_command(command: str) -> int:
 
 
 def create_migration(message: str):
-    """Criar nova migration"""
     if not message:
         print("❌ Erro: Mensagem da migration é obrigatória")
         print("Uso: python migrations.py create 'Descrição da mudança'")
