@@ -52,7 +52,7 @@ class Transaction(SQLModel, table=True):
     transaction_type: Optional[TransactionType] = Relationship(back_populates="transactions")
 
 
-# Models para criação (sem campos auto-gerados)
+# Models para criação
 class UserCreate(SQLModel):
     name: str = Field(max_length=255)
     email: str = Field(max_length=255)
@@ -70,7 +70,7 @@ class TransactionCreate(SQLModel):
     value: Decimal = Field(decimal_places=2, max_digits=10)
 
 
-# Models para leitura (com todos os campos)
+# Models para leitura
 class UserRead(SQLModel):
     id: int
     name: str
